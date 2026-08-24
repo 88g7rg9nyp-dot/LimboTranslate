@@ -130,7 +130,7 @@
                                      PreviewKeyDown="HotkeyBox_PreviewKeyDown" />
                         </Grid>
                         <CheckBox x:Name="PopupEnabledCheck" Content="Всплывающее окно по двойному Ctrl" />
-                    <CheckBox x:Name="MouseSelectionCheck" Content="Переводить при выделении мышью" Margin="0,8,0,0" />
+                        <CheckBox x:Name="MouseSelectionCheck" Content="Переводить при выделении мышью" Margin="0,8,0,0" />
                     </StackPanel>
                 </Border>
 
