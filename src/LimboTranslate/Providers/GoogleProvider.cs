@@ -1,4 +1,4 @@
-﻿using System.Net.Http;
+using System.Net.Http;
 using System.Text;
 using System.Text.Json;
 
@@ -7,6 +7,13 @@ namespace LimboTranslate.Providers;
 public sealed class GoogleProvider : ITranslationProvider
 {
     private const string UserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64)";
+
+    private static readonly string[] Hosts =
+    {
+        "https://translate.googleapis.com/translate_a/single",
+        "https://clients5.google.com/translate_a/single",
+        "https://translate.google.com/translate_a/single"
+    };
 
     private static readonly HttpClient Http = CreateClient();
 
@@ -29,32 +36,53 @@ public sealed class GoogleProvider : ITranslationProvider
             return TranslationResult.Fail(Name, "Пустой текст");
         }
 
-        try
-        {
-            var url = "https://translate.googleapis.com/translate_a/single"
-                + "?client=gtx"
-                + "&sl=" + Uri.EscapeDataString(string.IsNullOrWhiteSpace(from) ? "auto" : from)
-                + "&tl=" + Uri.EscapeDataString(to)
-                + "&dt=t&dt=bd&dt=rm&dt=at"
-                + "&q=" + Uri.EscapeDataString(text);
+        var query = "?client=gtx"
+            + "&sl=" + Uri.EscapeDataString(string.IsNullOrWhiteSpace(from) ? "auto" : from)
+            + "&tl=" + Uri.EscapeDataString(to)
+            + "&dt=t&dt=bd&dt=rm&dt=at"
+            + "&q=" + Uri.EscapeDataString(text);
 
-            using var response = await Http.GetAsync(url, ct).ConfigureAwait(false);
-            if (!response.IsSuccessStatusCode)
+        var lastCode = 0;
+
+        for (var attempt = 0; attempt < Hosts.Length * 2; attempt++)
+        {
+            var host = Hosts[attempt % Hosts.Length];
+
+            try
             {
-                return TranslationResult.Fail(Name, "Google вернул код " + (int)response.StatusCode);
-            }
+                using var response = await Http.GetAsync(host + query, ct).ConfigureAwait(false);
 
-            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            return Parse(json);
+                if (response.IsSuccessStatusCode)
+                {
+                    var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                    return Parse(json);
+                }
+
+                lastCode = (int)response.StatusCode;
+
+                if (lastCode != 429 && lastCode != 403 && lastCode < 500)
+                {
+                    return TranslationResult.Fail(Name, "Google вернул код " + lastCode);
+                }
+
+                await Task.Delay(250 * (attempt + 1), ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                return TranslationResult.Fail(Name, "Запрос отменён");
+            }
+            catch (Exception ex)
+            {
+                if (attempt == Hosts.Length * 2 - 1)
+                {
+                    return TranslationResult.Fail(Name, "Google недоступен: " + ex.Message);
+                }
+            }
         }
-        catch (OperationCanceledException)
-        {
-            return TranslationResult.Fail(Name, "Запрос отменён");
-        }
-        catch (Exception ex)
-        {
-            return TranslationResult.Fail(Name, "Google недоступен: " + ex.Message);
-        }
+
+        return lastCode == 429
+            ? TranslationResult.Fail(Name, "Google временно ограничил запросы (429). Попробуйте позже или переключитесь на DeepL")
+            : TranslationResult.Fail(Name, "Google вернул код " + lastCode);
     }
 
     private TranslationResult Parse(string json)
