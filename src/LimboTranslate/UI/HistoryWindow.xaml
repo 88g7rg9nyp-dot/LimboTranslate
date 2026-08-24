@@ -1,0 +1,132 @@
+<Window x:Class="LimboTranslate.UI.HistoryWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="История переводов"
+        Width="640"
+        Height="480"
+        MinWidth="480"
+        MinHeight="320"
+        WindowStartupLocation="CenterScreen"
+        Background="{StaticResource BgBrush}"
+        FontFamily="Segoe UI"
+        FontSize="13">
+
+    <Window.Resources>
+
+        <Style x:Key="ColumnHeaderStyle" TargetType="GridViewColumnHeader">
+            <Setter Property="Background" Value="{StaticResource PanelBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderBrush2}" />
+            <Setter Property="BorderThickness" Value="0,0,1,1" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="GridViewColumnHeader">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Left"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="HistoryRowStyle" TargetType="ListViewItem">
+            <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
+            <Setter Property="Background" Value="#252526" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ListViewItem">
+                        <Border x:Name="Root"
+                                Background="{TemplateBinding Background}"
+                                Padding="0,3">
+                            <GridViewRowPresenter Content="{TemplateBinding Content}"
+                                                  Columns="{TemplateBinding GridView.ColumnCollection}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="ItemsControl.AlternationIndex" Value="1">
+                                <Setter TargetName="Root" Property="Background" Value="#2A2A2B" />
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="#333337" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="Root" Property="Background" Value="{StaticResource AccentBrush}" />
+                                <Setter Property="Foreground" Value="White" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+    </Window.Resources>
+
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,8">
+            <TextBox x:Name="SearchBox" TextChanged="SearchBox_TextChanged" />
+            <TextBlock IsHitTestVisible="False"
+                       Margin="9,0,0,0"
+                       VerticalAlignment="Center"
+                       Text="Поиск по истории…">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Setter Property="FontFamily" Value="Segoe UI" />
+                        <Setter Property="FontSize" Value="13" />
+                        <Setter Property="Foreground" Value="{StaticResource SubtleTextBrush}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Text, ElementName=SearchBox}" Value="">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+        </Grid>
+
+        <ListView x:Name="HistoryList"
+                  Grid.Row="1"
+                  AlternationCount="2"
+                  Background="{StaticResource PanelBrush}"
+                  BorderBrush="{StaticResource BorderBrush2}"
+                  BorderThickness="1"
+                  Foreground="{StaticResource TextBrush}"
+                  ItemContainerStyle="{StaticResource HistoryRowStyle}"
+                  MouseDoubleClick="HistoryList_MouseDoubleClick"
+                  PreviewKeyDown="HistoryList_PreviewKeyDown"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+            <ListView.View>
+                <GridView ColumnHeaderContainerStyle="{StaticResource ColumnHeaderStyle}">
+                    <GridViewColumn Header="Дата" Width="100" DisplayMemberBinding="{Binding Date}" />
+                    <GridViewColumn Header="Исходный текст" Width="210" DisplayMemberBinding="{Binding Source}" />
+                    <GridViewColumn Header="Перевод" Width="210" DisplayMemberBinding="{Binding Translated}" />
+                    <GridViewColumn Header="Сервис" Width="70" DisplayMemberBinding="{Binding Provider}" />
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <Grid Grid.Row="2" Margin="0,8,0,0">
+            <TextBlock x:Name="StatusText"
+                       VerticalAlignment="Center"
+                       Foreground="{StaticResource SubtleTextBrush}" />
+            <StackPanel HorizontalAlignment="Right" Orientation="Horizontal">
+                <Button Content="Удалить" Width="90" Click="DeleteButton_Click" />
+                <Button Content="Очистить всё" Width="110" Margin="8,0,0,0" Click="ClearButton_Click" />
+            </StackPanel>
+        </Grid>
+
+    </Grid>
+</Window>

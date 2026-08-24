@@ -1,0 +1,80 @@
+name: build
+
+on:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore
+        run: dotnet restore LimboTranslate.sln
+
+      - name: Build
+        run: dotnet build LimboTranslate.sln -c Release --no-restore
+
+      - name: Publish
+        run: >
+          dotnet publish src/LimboTranslate/LimboTranslate.csproj
+          -c Release
+          -r win-x64
+          --self-contained true
+          -p:PublishSingleFile=true
+          -p:IncludeNativeLibrariesForSelfExtract=true
+          -p:EnableCompressionInSingleFile=true
+          -p:DebugType=none
+          -o publish
+
+      - name: Resolve version
+        id: ver
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF -like 'refs/tags/v*') {
+            $v = $env:GITHUB_REF -replace '^refs/tags/v', ''
+          } else {
+            $v = '1.0.0'
+          }
+          "version=$v" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+
+      - name: Install Inno Setup
+        run: choco install innosetup --no-progress -y
+
+      - name: Build installer
+        run: >
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          /DMyAppVersion=${{ steps.ver.outputs.version }}
+          installer\LimboTranslate.iss
+
+      - name: Upload app
+        uses: actions/upload-artifact@v4
+        with:
+          name: LimboTranslate-portable
+          path: publish/LimboTranslate.exe
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: LimboTranslate-setup
+          path: Output/*.exe
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            publish/LimboTranslate.exe
+            Output/*.exe
