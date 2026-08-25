@@ -25,11 +25,11 @@
             MouseLeftButtonUp="Root_MouseLeftButtonUp"
             MouseEnter="Root_MouseEnter"
             MouseLeave="Root_MouseLeave">
-        <TextBlock Text="A"
-                   HorizontalAlignment="Center"
-                   VerticalAlignment="Center"
-                   FontSize="13"
-                   FontWeight="SemiBold"
-                   Foreground="{StaticResource AccentBrush}" />
+        <Image Source="pack://application:,,,/Assets/logo.png"
+               Width="18"
+               Height="18"
+               HorizontalAlignment="Center"
+               VerticalAlignment="Center"
+               RenderOptions.BitmapScalingMode="HighQuality" />
     </Border>
 </Window>

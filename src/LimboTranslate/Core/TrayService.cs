@@ -101,6 +101,23 @@ public sealed class TrayService : IDisposable
     {
         try
         {
+            var uri = new Uri("pack://application:,,,/Assets/app.ico", UriKind.Absolute);
+            var stream = System.Windows.Application.GetResourceStream(uri)?.Stream;
+            if (stream is not null)
+            {
+                using (stream)
+                {
+                    _generatedIcon = new Icon(stream, new System.Drawing.Size(16, 16));
+                    return _generatedIcon;
+                }
+            }
+        }
+        catch
+        {
+        }
+
+        try
+        {
             using var bitmap = new Bitmap(16, 16, DrawingPixelFormat.Format32bppArgb);
             using (var graphics = Graphics.FromImage(bitmap))
             {

@@ -24,6 +24,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+SetupIconFile=..\src\LimboTranslate\Assets\app.ico
 CloseApplications=yes
 SetupMutex=LimboTranslateSetupMutex
 
