@@ -1,3 +1,4 @@
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
@@ -22,6 +23,23 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        DispatcherUnhandledException += (_, args) =>
+        {
+            LogCrash("UI", args.Exception);
+            args.Handled = true;
+        };
+
+        AppDomain.CurrentDomain.UnhandledException += (_, args) =>
+        {
+            LogCrash("Domain", args.ExceptionObject as Exception);
+        };
+
+        TaskScheduler.UnobservedTaskException += (_, args) =>
+        {
+            LogCrash("Task", args.Exception);
+            args.SetObserved();
+        };
+
         _instanceMutex = new Mutex(true, "LimboTranslate_SingleInstance", out bool createdNew);
         if (!createdNew)
         {
@@ -168,6 +186,27 @@ public partial class App : Application
     private void OnOpenSettings()
     {
         SettingsWindow.ShowWindow(OnSettingsChanged);
+    }
+
+    private static void LogCrash(string source, Exception? ex)
+    {
+        if (ex is null)
+            return;
+
+        try
+        {
+            string dir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "LimboTranslate");
+            Directory.CreateDirectory(dir);
+
+            File.AppendAllText(
+                Path.Combine(dir, "crash.log"),
+                DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " [" + source + "] " + ex + Environment.NewLine + Environment.NewLine);
+        }
+        catch
+        {
+        }
     }
 
     private void OnExitRequested()
