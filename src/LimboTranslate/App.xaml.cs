@@ -111,7 +111,7 @@ public partial class App : Application
         if (string.IsNullOrWhiteSpace(text))
             return;
 
-        PopupWindow.ShowPopup(text, point);
+        SelectionIconWindow.ShowIcon(text, point);
     }
 
     private async void OnTranslateSelection()
