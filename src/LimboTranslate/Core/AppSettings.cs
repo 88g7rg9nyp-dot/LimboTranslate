@@ -4,7 +4,7 @@ public class AppSettings
 {
     public string SourceLanguage { get; set; } = "auto";
     public string TargetLanguage { get; set; } = "ru";
-    public List<string> EnabledProviders { get; set; } = new() { "Google", "DeepL" };
+    public List<string> EnabledProviders { get; set; } = new() { "Google", "DeepL", "Yandex", "MyMemory" };
     public string ActiveProvider { get; set; } = "Google";
     public bool StartWithWindows { get; set; } = false;
     public bool DarkTheme { get; set; } = true;

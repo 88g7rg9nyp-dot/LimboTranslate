@@ -91,7 +91,7 @@ public partial class PopupWindow : Window
         TranslationResult result;
         try
         {
-            result = await provider.TranslateAsync(text, from, to, token);
+            result = await ProviderRegistry.TranslateWithFallbackAsync(text, from, to, providerName, token);
         }
         catch (OperationCanceledException)
         {
