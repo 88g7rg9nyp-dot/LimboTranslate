@@ -22,6 +22,9 @@ public sealed class DeepLProvider : ITranslationProvider
         var client = new HttpClient { Timeout = TimeSpan.FromSeconds(20) };
         client.DefaultRequestHeaders.TryAddWithoutValidation("User-Agent", UserAgent);
         client.DefaultRequestHeaders.TryAddWithoutValidation("Accept", "*/*");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Accept-Language", "en-US,en;q=0.9");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Referer", "https://www.deepl.com/");
+        client.DefaultRequestHeaders.TryAddWithoutValidation("Origin", "https://www.deepl.com");
         return client;
     }
 
@@ -32,35 +35,49 @@ public sealed class DeepLProvider : ITranslationProvider
             return TranslationResult.Fail(Name, "Пустой текст");
         }
 
-        try
+        for (var attempt = 0; attempt < 4; attempt++)
         {
-            var id = NextId();
-            var payload = BuildPayload(text, from, to, id);
-
-            using var content = new StringContent(payload, Encoding.UTF8, "application/json");
-            using var response = await Http.PostAsync(Endpoint, content, ct).ConfigureAwait(false);
-
-            if (response.StatusCode == HttpStatusCode.TooManyRequests)
+            try
             {
-                return TranslationResult.Fail(Name, "DeepL временно недоступен (лимит запросов)");
-            }
+                var id = NextId();
+                var payload = BuildPayload(text, from, to, id);
 
-            if (!response.IsSuccessStatusCode)
+                using var content = new StringContent(payload, Encoding.UTF8, "application/json");
+                using var response = await Http.PostAsync(Endpoint, content, ct).ConfigureAwait(false);
+
+                if (response.StatusCode == HttpStatusCode.TooManyRequests)
+                {
+                    if (attempt == 3)
+                    {
+                        return TranslationResult.Fail(Name, "DeepL временно недоступен (лимит запросов)");
+                    }
+
+                    await Task.Delay(400 * (attempt + 1), ct).ConfigureAwait(false);
+                    continue;
+                }
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    return TranslationResult.Fail(Name, "DeepL вернул код " + (int)response.StatusCode);
+                }
+
+                var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
+                return Parse(json, from);
+            }
+            catch (OperationCanceledException)
             {
-                return TranslationResult.Fail(Name, "DeepL вернул код " + (int)response.StatusCode);
+                return TranslationResult.Fail(Name, "Запрос отменён");
             }
+            catch (Exception ex)
+            {
+                if (attempt == 3)
+                {
+                    return TranslationResult.Fail(Name, "DeepL недоступен: " + ex.Message);
+                }
+            }
+        }
 
-            var json = await response.Content.ReadAsStringAsync(ct).ConfigureAwait(false);
-            return Parse(json, from);
-        }
-        catch (OperationCanceledException)
-        {
-            return TranslationResult.Fail(Name, "Запрос отменён");
-        }
-        catch (Exception ex)
-        {
-            return TranslationResult.Fail(Name, "DeepL недоступен: " + ex.Message);
-        }
+        return TranslationResult.Fail(Name, "DeepL временно недоступен (лимит запросов)");
     }
 
     private static long NextId() => Random.Shared.Next(1, 99_999_999) * 10_000L + 1;
