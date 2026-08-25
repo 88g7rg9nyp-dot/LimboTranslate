@@ -4,8 +4,8 @@ public class AppSettings
 {
     public string SourceLanguage { get; set; } = "auto";
     public string TargetLanguage { get; set; } = "ru";
-    public List<string> EnabledProviders { get; set; } = new() { "Google", "DeepL", "Yandex", "MyMemory" };
-    public string ActiveProvider { get; set; } = "Google";
+    public List<string> EnabledProviders { get; set; } = new() { "Yandex", "Google", "DeepL", "MyMemory" };
+    public string ActiveProvider { get; set; } = "Yandex";
     public bool StartWithWindows { get; set; } = false;
     public bool DarkTheme { get; set; } = true;
     public int HistoryLimit { get; set; } = 500;

@@ -4,9 +4,9 @@ public static class ProviderRegistry
 {
     public static IReadOnlyList<ITranslationProvider> All { get; } = new ITranslationProvider[]
     {
+        new YandexProvider(),
         new GoogleProvider(),
         new DeepLProvider(),
-        new YandexProvider(),
         new MyMemoryProvider()
     };
 
