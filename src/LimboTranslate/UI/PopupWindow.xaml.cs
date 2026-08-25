@@ -56,13 +56,14 @@ public partial class PopupWindow : Window
 
         var settings = App.Settings;
         string provider = settings.ActiveProvider;
+        string target = Languages.ResolveTarget(_sourceText, settings.SourceLanguage, settings.TargetLanguage);
 
         ProviderText.Text = provider;
         SourceTextBlock.Text = _sourceText;
         TranslationTextBlock.Text = "Перевод…";
         TranscriptionTextBlock.Visibility = Visibility.Collapsed;
         DictionaryTextBlock.Visibility = Visibility.Collapsed;
-        FooterTextBlock.Text = BuildFooter(settings.SourceLanguage, settings.TargetLanguage, provider);
+        FooterTextBlock.Text = BuildFooter(settings.SourceLanguage, target, provider);
 
         Show();
         Reposition();
@@ -71,7 +72,7 @@ public partial class PopupWindow : Window
         BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(120)));
         _autoClose.Start();
 
-        _ = TranslateAsync(_sourceText, settings.SourceLanguage, settings.TargetLanguage, provider);
+        _ = TranslateAsync(_sourceText, settings.SourceLanguage, target, provider);
     }
 
     private async Task TranslateAsync(string text, string from, string to, string providerName)

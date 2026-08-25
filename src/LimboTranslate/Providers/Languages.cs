@@ -1,4 +1,4 @@
-﻿namespace LimboTranslate.Providers;
+namespace LimboTranslate.Providers;
 
 public static class Languages
 {
@@ -32,5 +32,49 @@ public static class Languages
         }
 
         return All.TryGetValue(code, out var name) ? name : code;
+    }
+
+    public static bool IsRussian(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        int cyrillic = 0;
+        int latin = 0;
+
+        foreach (char c in text)
+        {
+            if (c >= 'а' && c <= 'я' || c >= 'А' && c <= 'Я' || c == 'ё' || c == 'Ё')
+            {
+                cyrillic++;
+            }
+            else if (c >= 'a' && c <= 'z' || c >= 'A' && c <= 'Z')
+            {
+                latin++;
+            }
+        }
+
+        return cyrillic > latin;
+    }
+
+    public static string ResolveTarget(string text, string sourceLanguage, string targetLanguage)
+    {
+        sourceLanguage ??= string.Empty;
+        targetLanguage ??= string.Empty;
+
+        bool autoDetect = string.IsNullOrWhiteSpace(sourceLanguage)
+            || sourceLanguage.Equals("auto", StringComparison.OrdinalIgnoreCase);
+
+        bool russianSource = sourceLanguage.Equals("ru", StringComparison.OrdinalIgnoreCase)
+            || (autoDetect && IsRussian(text));
+
+        if (russianSource && targetLanguage.Equals("ru", StringComparison.OrdinalIgnoreCase))
+        {
+            return "en";
+        }
+
+        return targetLanguage;
     }
 }
