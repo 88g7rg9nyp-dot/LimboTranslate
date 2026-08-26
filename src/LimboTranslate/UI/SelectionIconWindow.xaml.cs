@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -16,6 +17,14 @@ public partial class SelectionIconWindow : Window
     private Point _anchor;
     private string _text = string.Empty;
     private bool _closing;
+    private bool _editable;
+    private IntPtr _sourceWindow = IntPtr.Zero;
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
 
     public SelectionIconWindow()
     {
@@ -48,6 +57,12 @@ public partial class SelectionIconWindow : Window
     {
         _anchor = screenPoint;
         _text = text.Trim();
+        _sourceWindow = GetForegroundWindow();
+        _editable = Core.SelectionCapture.IsEditableFocused();
+
+        RootBorder.ToolTip = _editable
+            ? "Заменить выделенный текст переводом"
+            : "Перевести выделенный текст";
 
         Show();
         Reposition();
@@ -112,10 +127,56 @@ public partial class SelectionIconWindow : Window
     {
         string text = _text;
         Point anchor = _anchor;
+        bool editable = _editable;
+        IntPtr sourceWindow = _sourceWindow;
 
         CloseIcon();
 
+        if (editable)
+        {
+            _ = ReplaceInFieldAsync(text, anchor, sourceWindow);
+            return;
+        }
+
         PopupWindow.ShowPopup(text, anchor);
+    }
+
+    private static async Task ReplaceInFieldAsync(string text, Point anchor, IntPtr sourceWindow)
+    {
+        try
+        {
+            var settings = App.Settings;
+            string target = Providers.Languages.ResolveTarget(text, settings.SourceLanguage, settings.TargetLanguage);
+
+            var result = await Providers.ProviderRegistry.TranslateWithFallbackAsync(
+                text,
+                settings.SourceLanguage,
+                target,
+                settings.ActiveProvider,
+                CancellationToken.None).ConfigureAwait(true);
+
+            if (!result.Success || string.IsNullOrWhiteSpace(result.TranslatedText))
+            {
+                PopupWindow.ShowPopup(text, anchor);
+                return;
+            }
+
+            if (sourceWindow != IntPtr.Zero)
+            {
+                SetForegroundWindow(sourceWindow);
+                await Task.Delay(80).ConfigureAwait(true);
+            }
+
+            bool replaced = await Core.SelectionCapture.ReplaceSelectionAsync(result.TranslatedText).ConfigureAwait(true);
+            if (!replaced)
+            {
+                PopupWindow.ShowPopup(text, anchor);
+            }
+        }
+        catch
+        {
+            PopupWindow.ShowPopup(text, anchor);
+        }
     }
 
     private void Root_MouseEnter(object sender, MouseEventArgs e)

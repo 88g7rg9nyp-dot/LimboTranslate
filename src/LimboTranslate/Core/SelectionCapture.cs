@@ -12,6 +12,7 @@ public static class SelectionCapture
 
     private const byte VkControl = 0x11;
     private const byte VkC = 0x43;
+    private const byte VkV = 0x56;
     private const uint KeyEventKeyUp = 0x0002;
 
     private const int ClipboardRetries = 3;
@@ -31,6 +32,73 @@ public static class SelectionCapture
 
         text = await TryGetViaCopyAsync().ConfigureAwait(true);
         return string.IsNullOrWhiteSpace(text) ? null : Normalize(text);
+    }
+
+    public static bool IsEditableFocused()
+    {
+        try
+        {
+            AutomationElement? focused = AutomationElement.FocusedElement;
+            if (focused is null)
+                return false;
+
+            if (!focused.TryGetCurrentPattern(ValuePattern.Pattern, out object? valueObject)
+                || valueObject is not ValuePattern valuePattern)
+            {
+                return false;
+            }
+
+            return !valuePattern.Current.IsReadOnly;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static async Task<bool> ReplaceSelectionAsync(string replacement)
+    {
+        if (string.IsNullOrEmpty(replacement))
+            return false;
+
+        string? previous = await GetClipboardTextAsync().ConfigureAwait(true);
+
+        try
+        {
+            bool copied = false;
+            for (int attempt = 0; attempt < ClipboardRetries; attempt++)
+            {
+                try
+                {
+                    RunOnUi(() => Clipboard.SetText(replacement));
+                    copied = true;
+                    break;
+                }
+                catch
+                {
+                    await Task.Delay(ClipboardRetryDelayMs).ConfigureAwait(true);
+                }
+            }
+
+            if (!copied)
+                return false;
+
+            keybd_event(VkControl, 0, 0, UIntPtr.Zero);
+            keybd_event(VkV, 0, 0, UIntPtr.Zero);
+            keybd_event(VkV, 0, KeyEventKeyUp, UIntPtr.Zero);
+            keybd_event(VkControl, 0, KeyEventKeyUp, UIntPtr.Zero);
+
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            await Task.Delay(ClipboardRestoreDelayMs).ConfigureAwait(true);
+            await RestoreClipboardAsync(previous).ConfigureAwait(true);
+        }
     }
 
     public static string? GetClipboardText()
